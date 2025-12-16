@@ -346,6 +346,23 @@ Render #3 → COMMIT → useEffect runs once ✓
 
 ## 1.2 Reconciliation and Keys
 
+**🧠 Quick Recall (from 1.1):** Before we dive in, test your retention: Where should you put side effects like API calls or `localStorage.setItem()` - in the component body or in useEffect? Why?
+
+<details>
+<summary>Check your answer</summary>
+
+**Answer:** In useEffect (commit phase)
+
+**Why:**
+- Render phase must be pure
+- React may call render multiple times without committing
+- Side effects only belong in the commit phase
+
+Good! This primes your brain to learn about reconciliation. Your brain is now in "learning mode."
+</details>
+
+---
+
 ### Junior Perspective
 "Keys are needed to avoid warnings"
 
@@ -865,14 +882,98 @@ const posts = fetchPosts().map((post, i) => ({
 
 ---
 
+**Question 4 (Interleaved - Combines 1.1 + 1.2):** This component has TWO bugs - one from section 1.1 (render phases) and one from section 1.2 (keys). Can you spot both?
+
+```javascript
+function TodoList({ todos }) {
+  // Update document title
+  document.title = `${todos.length} todos`;
+
+  return (
+    <ul>
+      {todos.map((todo, index) => (
+        <li key={index}>
+          <input defaultValue={todo.text} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+- A) No bugs, looks good
+- B) Only the key issue
+- C) Only the document.title issue
+- D) Both key and document.title are problematic
+
+<details>
+<summary>Show answer</summary>
+
+**D) Both are problematic**
+
+**Bug #1 (from 1.1 - Render/Commit Phases):**
+```javascript
+document.title = `${todos.length} todos`;  // ❌ Side effect in render!
+```
+
+**Fix:**
+```javascript
+useEffect(() => {
+  document.title = `${todos.length} todos`;
+}, [todos.length]);
+```
+
+**Bug #2 (from 1.2 - Keys):**
+```javascript
+key={index}  // ❌ Index as key with editable input
+```
+
+**Fix:**
+```javascript
+key={todo.id}  // ✅ Stable key
+```
+
+**Why interleaved questions matter:**
+
+When you see code "in the wild," bugs don't come labeled by chapter! You need to recognize:
+- "That's a render phase violation" (from 1.1)
+- "That's an index key bug" (from 1.2)
+
+Interleaving trains your pattern recognition across concepts.
+
+**Real scenario:** In a code review, you might see 5 different issues from 5 different patterns. Interleaved practice prepares you for this!
+
+</details>
+
+---
+
 **Score Check:**
-- 3/3: You understand keys! Ready for 1.3 ✅
-- 2/3: Review the war story above
-- 0-1/3: Re-read section 1.2
+- 4/4: Excellent! You can identify multiple bug patterns ✅
+- 3/4: You understand keys! Ready for 1.3 ✅
+- 2/4: Review the war story above
+- 0-1/4: Re-read sections 1.1 and 1.2
 
 ---
 
 ## 1.3 Controlled vs Uncontrolled Components
+
+**🧠 Quick Recall (from 1.2):** Before learning about controlled inputs, test yourself: What makes a good key for a list item? Why does `key={index}` cause bugs?
+
+<details>
+<summary>Check your answer</summary>
+
+**Good key:** Stable, unique identifier (like `item.id`)
+
+**Why index causes bugs:**
+- When items reorder/delete, indices change
+- React thinks components are the same (same key)
+- Wrong components get reused
+- State mismatch occurs (e.g., wrong input values)
+
+Perfect! Now your brain is ready to learn about controlled vs uncontrolled patterns.
+</details>
+
+---
 
 ### When to Use Each
 
@@ -1211,7 +1312,144 @@ Test 3: Submit form → all values captured ✓
 
 ---
 
+## ✅ Quick Knowledge Check: Controlled vs Uncontrolled
+
+**Question 1:** You have a search input that filters a list in real-time. Should it be controlled or uncontrolled?
+
+- A) Controlled (value + onChange)
+- B) Uncontrolled (ref)
+- C) Either works the same
+- D) Depends on list size
+
+<details>
+<summary>Show answer</summary>
+
+**A) Controlled**
+
+**Why:**
+- You need the value in real-time to filter the list
+- The input value directly affects other UI (the filtered list)
+- This is the textbook case for controlled inputs
+
+```javascript
+const [search, setSearch] = useState('');
+const filteredItems = items.filter(item =>
+  item.name.includes(search)
+);
+
+<input value={search} onChange={e => setSearch(e.target.value)} />
+```
+
+</details>
+
+---
+
+**Question 2:** You have a contact form with 10 fields. Users complain typing feels slow. What's the FIRST thing to try?
+
+- A) Add React.memo to everything
+- B) Use useMemo for all calculations
+- C) Make most inputs uncontrolled
+- D) Debounce all onChange handlers
+
+<details>
+<summary>Show answer</summary>
+
+**C) Make most inputs uncontrolled**
+
+**Why it's first:**
+- Simplest solution (remove state!)
+- Biggest impact (70%+ fewer renders)
+- No added complexity
+- Most fields don't need real-time validation
+
+```javascript
+// Instead of 10 useState hooks:
+const formRef = useRef();
+
+const handleSubmit = (e) => {
+  const data = new FormData(formRef.current);
+  // Get all values at once
+};
+```
+
+**Why others are wrong:**
+- A & B: Premature optimization, adds complexity
+- D: Doesn't solve the root problem (too many renders)
+
+**Senior thinking:** "Simplest solution first. Can I just... not have state?"
+
+</details>
+
+---
+
+**Question 3:** When is it OK to use uncontrolled inputs?
+
+- A) Never (always control everything)
+- B) Only for file inputs
+- C) When you only need the value on submit
+- D) Only in class components
+
+<details>
+<summary>Show answer</summary>
+
+**C) When you only need the value on submit**
+
+**Perfect use cases:**
+```javascript
+// Simple contact form - no real-time validation needed
+<form onSubmit={handleSubmit}>
+  <input name="email" />
+  <input name="message" />
+  <button>Send</button>
+</form>
+
+// Get values on submit only
+const handleSubmit = (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  // Send to API
+};
+```
+
+**Why this works:**
+- No re-renders while typing
+- Still get all values when needed
+- Simple and performant
+
+**When NOT to use uncontrolled:**
+- Real-time validation
+- Character counters
+- Autocomplete
+- Value transformations (uppercase, formatting)
+
+</details>
+
+---
+
+**Score Check:**
+- 3/3: You understand controlled/uncontrolled trade-offs! ✅
+- 2/3: Review the hybrid approach in Exercise 1.3
+- 0-1/3: Re-read section 1.3
+
+---
+
 ## 1.4 Component Composition vs Props Drilling
+
+**🧠 Quick Recall (from 1.3):** Before tackling props drilling, quick test: What's the main benefit of using uncontrolled inputs in a large form?
+
+<details>
+<summary>Check your answer</summary>
+
+**Main benefit:** Eliminates re-renders while typing
+
+- No state updates = no re-renders
+- Get all values once (on submit via FormData)
+- 70%+ performance improvement in large forms
+
+Great! Now let's see how to avoid passing that form state through 5 levels of components...
+</details>
+
+---
 
 ### Junior Perspective
 "Pass props down the tree"
@@ -1514,6 +1752,23 @@ function Header({ user, notifications, onThemeToggle }) {
 </details>
 
 ---
+
+**🧠 Quick Recall (from 1.4):** Before diving into data flow, test your retention: When should you use Context vs just passing props? What's the main downside of props drilling, and what's the alternative using composition?
+
+<details>
+<summary>💡 Check your answer</summary>
+
+**When to use Context:**
+- Truly global state (user, theme, i18n)
+- Data needed by many components at different levels
+
+**Alternatives to props drilling:**
+- Use composition: pass components as children/props instead of data
+- Example: Instead of drilling `theme` through 5 levels, pass `<ThemeToggle />` as a component
+
+**Props drilling downside:** Creates tight coupling - every intermediate component needs to know about props it doesn't use.
+
+</details>
 
 ## 1.5 Thinking in Data Flow
 
@@ -2668,6 +2923,387 @@ function UserDashboard() {
 
 ---
 
+## 🧪 Performance Lab: Measure the Difference
+
+**Research shows:** Active experimentation with measurement creates deeper understanding than reading alone. Let's measure the actual performance impact of the mistakes above.
+
+**Instructions:** Copy-paste each code block into CodeSandbox or your local environment. Open DevTools Performance tab and compare.
+
+### Lab 1: Index vs Stable Keys
+
+**Measure:** How many unnecessary re-renders happen with `key={index}` vs `key={item.id}` when reordering?
+
+```javascript
+import { useState } from 'react';
+
+// Copy-paste this entire component
+function KeysPerformanceLab() {
+  const [items, setItems] = useState([
+    { id: 1, name: 'Task 1', color: 'red' },
+    { id: 2, name: 'Task 2', color: 'blue' },
+    { id: 3, name: 'Task 3', color: 'green' },
+    { id: 4, name: 'Task 4', color: 'orange' },
+    { id: 5, name: 'Task 5', color: 'purple' },
+  ]);
+
+  const [useStableKeys, setUseStableKeys] = useState(false);
+  const [renderCounts, setRenderCounts] = useState({});
+
+  const shuffle = () => {
+    setItems([...items].sort(() => Math.random() - 0.5));
+  };
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h2>Keys Performance Lab</h2>
+
+      <label>
+        <input
+          type="checkbox"
+          checked={useStableKeys}
+          onChange={(e) => setUseStableKeys(e.target.checked)}
+        />
+        Use Stable Keys (key=item.id)
+      </label>
+
+      <button onClick={shuffle} style={{ marginLeft: 10 }}>
+        Shuffle Items
+      </button>
+
+      <button
+        onClick={() => setRenderCounts({})}
+        style={{ marginLeft: 10 }}
+      >
+        Reset Counts
+      </button>
+
+      <div style={{ marginTop: 20 }}>
+        {items.map((item, index) => (
+          <TaskItem
+            key={useStableKeys ? item.id : index}
+            item={item}
+            renderCounts={renderCounts}
+            setRenderCounts={setRenderCounts}
+          />
+        ))}
+      </div>
+
+      <div style={{ marginTop: 20, fontWeight: 'bold' }}>
+        Total renders: {Object.values(renderCounts).reduce((a, b) => a + b, 0)}
+      </div>
+    </div>
+  );
+}
+
+function TaskItem({ item, renderCounts, setRenderCounts }) {
+  // Track renders for this specific item
+  React.useEffect(() => {
+    setRenderCounts((prev) => ({
+      ...prev,
+      [item.id]: (prev[item.id] || 0) + 1,
+    }));
+  });
+
+  return (
+    <div
+      style={{
+        padding: 10,
+        margin: 5,
+        backgroundColor: item.color,
+        color: 'white',
+      }}
+    >
+      {item.name} (renders: {renderCounts[item.id] || 1})
+    </div>
+  );
+}
+
+export default KeysPerformanceLab;
+```
+
+**What to observe:**
+- With `useStableKeys = false` (index keys): Click shuffle → All 5 items re-render
+- With `useStableKeys = true` (stable keys): Click shuffle → Only items that moved re-render
+- **Why:** React reuses DOM nodes when keys are stable
+
+**Expected results:**
+- Index keys: 5 re-renders per shuffle (all items)
+- Stable keys: 0-2 re-renders per shuffle (only moved items)
+- **Difference:** 60-100% fewer re-renders with stable keys
+
+---
+
+### Lab 2: Controlled vs Uncontrolled Performance
+
+**Measure:** How does controlled input performance degrade with large forms?
+
+```javascript
+import { useState } from 'react';
+
+// Copy-paste this entire component
+function ControlledInputLab() {
+  const [controlled, setControlled] = useState('');
+  const [uncontrolled, setUncontrolled] = useState('Initial');
+  const [renderCount, setRenderCount] = useState(0);
+
+  // Simulate expensive render work
+  const expensiveWork = () => {
+    let result = 0;
+    for (let i = 0; i < 100000; i++) {
+      result += Math.sqrt(i);
+    }
+    return result;
+  };
+
+  // Track renders
+  React.useEffect(() => {
+    setRenderCount((c) => c + 1);
+  });
+
+  const handleUncontrolledSubmit = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    setUncontrolled(formData.get('uncontrolled'));
+  };
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h2>Controlled vs Uncontrolled Lab</h2>
+      <div style={{ marginBottom: 20 }}>
+        Total renders: <strong>{renderCount}</strong>
+      </div>
+
+      {/* Simulate expensive component */}
+      <div style={{ color: '#666', fontSize: 12 }}>
+        (Expensive work result: {expensiveWork()})
+      </div>
+
+      <div style={{ display: 'flex', gap: 40, marginTop: 20 }}>
+        {/* Controlled Input */}
+        <div style={{ flex: 1, border: '2px solid blue', padding: 20 }}>
+          <h3>Controlled Input</h3>
+          <p>Value in state: {controlled}</p>
+          <input
+            type="text"
+            value={controlled}
+            onChange={(e) => setControlled(e.target.value)}
+            placeholder="Type here (re-renders on every keystroke)"
+            style={{ width: '100%', padding: 8 }}
+          />
+          <p style={{ fontSize: 12, color: '#666' }}>
+            ⚠️ Every keystroke triggers expensive work above
+          </p>
+        </div>
+
+        {/* Uncontrolled Input */}
+        <div style={{ flex: 1, border: '2px solid green', padding: 20 }}>
+          <h3>Uncontrolled Input</h3>
+          <p>Value in state: {uncontrolled}</p>
+          <form onSubmit={handleUncontrolledSubmit}>
+            <input
+              type="text"
+              name="uncontrolled"
+              defaultValue={uncontrolled}
+              placeholder="Type here (no re-renders)"
+              style={{ width: '100%', padding: 8 }}
+            />
+            <button type="submit" style={{ marginTop: 10 }}>
+              Update State
+            </button>
+          </form>
+          <p style={{ fontSize: 12, color: '#666' }}>
+            ✅ Typing doesn't trigger expensive work
+          </p>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 30, padding: 20, backgroundColor: '#f0f0f0' }}>
+        <h4>Observations:</h4>
+        <ul>
+          <li>Type in controlled input → render count increases rapidly</li>
+          <li>Type in uncontrolled input → render count stays same</li>
+          <li>
+            <strong>When to use controlled:</strong> Real-time validation,
+            character count, instant search
+          </li>
+          <li>
+            <strong>When to use uncontrolled:</strong> Forms with many fields,
+            expensive renders, submit-only validation
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+export default ControlledInputLab;
+```
+
+**What to measure:**
+1. Open React DevTools Profiler
+2. Start recording
+3. Type "Hello World" in controlled input → Note render count
+4. Type "Hello World" in uncontrolled input → Note render count
+5. Stop recording
+
+**Expected results:**
+- Controlled: 11 renders (one per character)
+- Uncontrolled: 0 renders while typing, 1 render on submit
+- **Insight:** Controlled inputs aren't bad - expensive downstream work is the problem
+
+---
+
+### Lab 3: Side Effects in Render Phase
+
+**Measure:** How many times does a side effect in render phase execute vs in useEffect?
+
+```javascript
+import { useState, useEffect } from 'react';
+
+// Copy-paste this entire component
+function SideEffectPhaseLab() {
+  const [count, setCount] = useState(0);
+  const [renderPhaseCount, setRenderPhaseCount] = useState(0);
+  const [effectPhaseCount, setEffectPhaseCount] = useState(0);
+
+  // ❌ BAD: Side effect in render phase
+  // React may call this 3+ times in Strict Mode!
+  (() => {
+    const current = renderPhaseCount + 1;
+    // Use setTimeout to avoid infinite loop with setState
+    setTimeout(() => setRenderPhaseCount(current), 0);
+  })();
+
+  // ✅ GOOD: Side effect in commit phase
+  useEffect(() => {
+    setEffectPhaseCount((c) => c + 1);
+  }, [count]);
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h2>Side Effect Phase Lab</h2>
+
+      <button onClick={() => setCount(count + 1)} style={{ padding: 10 }}>
+        Increment Count (current: {count})
+      </button>
+
+      <div
+        style={{
+          marginTop: 20,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 20,
+        }}
+      >
+        {/* Render Phase Counter */}
+        <div
+          style={{
+            padding: 20,
+            backgroundColor: '#ffebee',
+            border: '2px solid red',
+          }}
+        >
+          <h3>❌ Side Effect in Render Phase</h3>
+          <div style={{ fontSize: 48, fontWeight: 'bold' }}>
+            {renderPhaseCount}
+          </div>
+          <p>Times executed</p>
+          <p style={{ fontSize: 12, color: '#666' }}>
+            (May execute 2-3x per render in Strict Mode!)
+          </p>
+        </div>
+
+        {/* Effect Phase Counter */}
+        <div
+          style={{
+            padding: 20,
+            backgroundColor: '#e8f5e9',
+            border: '2px solid green',
+          }}
+        >
+          <h3>✅ Side Effect in useEffect</h3>
+          <div style={{ fontSize: 48, fontWeight: 'bold' }}>
+            {effectPhaseCount}
+          </div>
+          <p>Times executed</p>
+          <p style={{ fontSize: 12, color: '#666' }}>
+            (Executes exactly once per render)
+          </p>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 30, padding: 20, backgroundColor: '#f0f0f0' }}>
+        <h4>What's happening:</h4>
+        <ul>
+          <li>
+            <strong>Render phase (red):</strong> React may call render multiple
+            times before committing
+          </li>
+          <li>
+            In Strict Mode (dev), React intentionally renders twice to catch bugs
+          </li>
+          <li>
+            Side effects in render = multiple localStorage writes, API calls, etc.
+          </li>
+          <li>
+            <strong>Effect phase (green):</strong> Runs once per commit, after DOM
+            updates
+          </li>
+        </ul>
+        <p style={{ marginTop: 10, fontWeight: 'bold' }}>
+          Click increment a few times and watch the difference!
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default SideEffectPhaseLab;
+```
+
+**What to observe:**
+1. Run in development mode (React Strict Mode enabled)
+2. Click "Increment Count" several times
+3. Compare red counter (render phase) vs green counter (effect phase)
+
+**Expected results:**
+- Red counter (render phase): Increases 2-3x faster than clicks
+- Green counter (effect phase): Increases exactly 1x per click
+- **Insight:** Render phase may execute multiple times - never put side effects there!
+
+---
+
+### Your Lab Results
+
+After running these labs, answer:
+
+**Question 1:** In Lab 1 (keys), how many re-renders did you observe with index keys vs stable keys?
+- My result with index keys: ______
+- My result with stable keys: ______
+- Difference: ______%
+
+**Question 2:** In Lab 2 (controlled inputs), did you notice typing lag in the controlled input? At what point?
+- Typing felt slow after: ______ characters
+
+**Question 3:** In Lab 3 (side effects), what was the ratio of render phase count to effect phase count?
+- Ratio: ______ : 1
+- Why is this problematic for `localStorage.setItem()` or `fetch()`?
+
+<details>
+<summary>💡 Typical Results</summary>
+
+**Lab 1:** 60-80% fewer re-renders with stable keys (5 items → 1-2 items)
+
+**Lab 2:** Typing lag noticeable around 8-12 characters when expensive work runs on each keystroke
+
+**Lab 3:** Render phase executes 2-3x more than effect phase in Strict Mode
+
+**Key Insight:** These aren't theoretical problems - they're measurable performance issues!
+
+</details>
+
+---
+
 ## Pattern Recognition: Junior vs Senior
 
 | Junior Developer | Senior Developer |
@@ -2693,6 +3329,538 @@ function UserDashboard() {
 - Another developer maintains it?"
 
 **The mindset shift:** From "make it work" to "make it right, then make it work, then keep it working."
+
+---
+
+## 🧠 Cumulative Review: Test Your Complete Understanding
+
+**Research shows:** Testing yourself multiple times with spaced intervals dramatically improves long-term retention. Let's review all 5 sections together.
+
+**Instructions:** Try to answer each question from memory first. These questions mix concepts from the beginning of the chapter (1.1, 1.2) with recent sections (1.4, 1.5) to strengthen your recall.
+
+### Question 1: Render Phases (from 1.1)
+
+You see this code in a code review:
+
+```javascript
+function ProductCard({ product }) {
+  console.log('Rendering product:', product.id);
+
+  localStorage.setItem('lastViewed', product.id);
+
+  return <div>{product.name}</div>;
+}
+```
+
+**a)** What's wrong with this code?
+**b)** In which phase does the bug occur?
+**c)** How would you fix it?
+
+<details>
+<summary>✅ Answer</summary>
+
+**a) What's wrong:**
+- `localStorage.setItem` is a side effect in the render phase
+- React may call render multiple times without committing
+- Could write to localStorage 3+ times for one actual render
+
+**b) Phase:**
+- Bug occurs during **render phase** (pure computation)
+- Should be in **commit phase** (side effects)
+
+**c) Fix:**
+```javascript
+function ProductCard({ product }) {
+  console.log('Rendering product:', product.id); // OK - logging is acceptable
+
+  useEffect(() => {
+    localStorage.setItem('lastViewed', product.id); // ✅ In commit phase
+  }, [product.id]);
+
+  return <div>{product.name}</div>;
+}
+```
+
+**Key concept:** Render = pure. Side effects = useEffect.
+
+</details>
+
+### Question 2: Keys & Reconciliation (from 1.2)
+
+You're building a sortable todo list. Users report that when they sort by priority, the wrong checkboxes get checked.
+
+```javascript
+function TodoList({ todos }) {
+  const [sortBy, setSortBy] = useState('date');
+
+  const sorted = [...todos].sort((a, b) =>
+    sortBy === 'priority' ? a.priority - b.priority : a.date - b.date
+  );
+
+  return (
+    <div>
+      <button onClick={() => setSortBy('priority')}>Sort by Priority</button>
+      <button onClick={() => setSortBy('date')}>Sort by Date</button>
+
+      {sorted.map((todo, index) => (
+        <div key={index}>
+          <input type="checkbox" defaultChecked={todo.completed} />
+          {todo.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**a)** What's causing the bug?
+**b)** Why does sorting break the checkboxes?
+**c)** What are TWO fixes needed?
+
+<details>
+<summary>✅ Answer</summary>
+
+**a) Cause:** Using `index` as key + `defaultChecked` (uncontrolled input)
+
+**b) Why sorting breaks:**
+1. When array reorders, `index` changes for each item
+2. React thinks items moved positions, not that the array reordered
+3. DOM elements (checkboxes) stay in place, but React reassigns them to different todos
+4. `defaultChecked` only sets initial state - doesn't update on re-render
+
+**c) Two fixes needed:**
+
+```javascript
+// Fix 1: Stable keys
+{sorted.map((todo) => (
+  <div key={todo.id}>  {/* ✅ Stable identifier */}
+    {/* ... */}
+  </div>
+))}
+
+// Fix 2: Controlled input (or key on input to force recreation)
+<input
+  type="checkbox"
+  checked={todo.completed}  {/* ✅ Controlled */}
+  onChange={(e) => onToggle(todo.id, e.target.checked)}
+/>
+```
+
+**Key concept:** Keys are component identity. Index changes = wrong identity = reconciliation bugs.
+
+</details>
+
+### Question 3: Controlled vs Uncontrolled (from 1.3)
+
+You have a search filter that updates a list in real-time. The input feels sluggish with 1000+ items.
+
+```javascript
+function SearchableList({ items }) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filtered = items.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div>
+      <input
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <ul>
+        {filtered.map(item => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+**a)** Should the input be controlled or uncontrolled here?
+**b)** What's causing the performance issue?
+**c)** What optimization would you try FIRST?
+
+<details>
+<summary>✅ Answer</summary>
+
+**a) Controlled or uncontrolled?**
+- **Keep it controlled** - you need real-time filtering
+- The input itself isn't the problem
+
+**b) Performance issue:**
+- Every keystroke re-renders entire list
+- Filtering 1000+ items on every render
+- All 1000 `<li>` elements re-render
+
+**c) First optimization:**
+
+```javascript
+// Debounce the search (300ms delay)
+function SearchableList({ items }) {
+  const [inputValue, setInputValue] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(inputValue);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [inputValue]);
+
+  const filtered = useMemo(() =>
+    items.filter(item =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    [items, searchTerm]
+  );
+
+  return (
+    <div>
+      <input
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+      />
+      <ul>
+        {filtered.map(item => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+**Other optimizations:**
+- `useMemo` for expensive filtering
+- Virtualization for rendering (react-window)
+- `memo()` on list items
+
+**Key concept:** Controlled inputs are fine - optimize the downstream work, not the input.
+
+</details>
+
+### Question 4: Component Composition (from 1.4)
+
+You're refactoring this code that drills `theme` through 4 levels:
+
+```javascript
+function App() {
+  const [theme, setTheme] = useState('light');
+  return <Layout theme={theme} setTheme={setTheme} />;
+}
+
+function Layout({ theme, setTheme }) {
+  return <Header theme={theme} setTheme={setTheme} />;
+}
+
+function Header({ theme, setTheme }) {
+  return <Nav theme={theme} setTheme={setTheme} />;
+}
+
+function Nav({ theme, setTheme }) {
+  return <ThemeToggle theme={theme} setTheme={setTheme} />;
+}
+```
+
+**Your teammate suggests:** "Just use Context - it's global state."
+**You consider:** "Maybe composition could work here."
+
+**a)** Show how to refactor with Context
+**b)** Show how to refactor with Composition
+**c)** Which would you choose and why?
+
+<details>
+<summary>✅ Answer</summary>
+
+**a) Context solution:**
+
+```javascript
+const ThemeContext = createContext();
+
+function App() {
+  const [theme, setTheme] = useState('light');
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      <Layout />
+    </ThemeContext.Provider>
+  );
+}
+
+// Now components are clean
+function Layout() {
+  return <Header />;
+}
+
+function Header() {
+  return <Nav />;
+}
+
+function Nav() {
+  return <ThemeToggle />;
+}
+
+function ThemeToggle() {
+  const { theme, setTheme } = useContext(ThemeContext);
+  return <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+    {theme}
+  </button>;
+}
+```
+
+**b) Composition solution:**
+
+```javascript
+function App() {
+  const [theme, setTheme] = useState('light');
+
+  return (
+    <Layout>
+      <Header>
+        <Nav>
+          <ThemeToggle theme={theme} setTheme={setTheme} />
+        </Nav>
+      </Header>
+    </Layout>
+  );
+}
+
+// Components are now reusable
+function Layout({ children }) {
+  return <div className="layout">{children}</div>;
+}
+
+function Header({ children }) {
+  return <header>{children}</header>;
+}
+
+function Nav({ children }) {
+  return <nav>{children}</nav>;
+}
+```
+
+**c) Which to choose:**
+
+**Use Composition if:**
+- Only 1-2 components need the data ✅ (Only ThemeToggle uses it)
+- Components are primarily layout/structure ✅ (Layout, Header, Nav are wrappers)
+- Easy to pass components as children ✅ (Simple hierarchy)
+
+**Use Context if:**
+- Many components at different tree levels need it
+- Data is truly global (user, i18n, theme for 20+ components)
+- Can't easily restructure with children
+
+**Verdict here:** Composition is better - simpler, no context overhead, Layout/Header/Nav stay reusable.
+
+**Key concept:** Composition often beats Context for "pass-through" scenarios.
+
+</details>
+
+### Question 5: Data Flow (from 1.5)
+
+You're reviewing a PR where a junior dev passed `setCount` to 5 different child components:
+
+```javascript
+function Dashboard() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <Stats count={count} setCount={setCount} />
+      <Chart count={count} setCount={setCount} />
+      <Table count={count} setCount={setCount} />
+      <Summary count={count} setCount={setCount} />
+      <Actions count={count} setCount={setCount} />
+    </div>
+  );
+}
+```
+
+**a)** What's the architectural problem?
+**b)** How do you explain the issue to the junior dev?
+**c)** What's the refactor?
+
+<details>
+<summary>✅ Answer</summary>
+
+**a) Architectural problems:**
+1. **Unclear ownership:** Who's responsible for `count`? Parent or children?
+2. **Unclear contract:** What can children do with `setCount`? Increment? Replace? Reset?
+3. **Tight coupling:** Every child can modify parent state directly
+4. **Hard to debug:** If `count` is wrong, which of 5 components broke it?
+5. **Hard to reuse:** Children now depend on parent's state shape
+
+**b) Explanation to junior dev:**
+
+> "When you pass `setState` down, you're giving children full control of parent state. It's like giving 5 people the keys to your car - you don't know who drove it where.
+>
+> Instead, pass **event handlers** that describe the *intent* (what happened), not the *mechanism* (how to update state). The parent decides how to respond to events."
+
+**c) Refactor:**
+
+```javascript
+function Dashboard() {
+  const [count, setCount] = useState(0);
+
+  // Parent owns state logic
+  const handleIncrement = () => setCount(c => c + 1);
+  const handleReset = () => setCount(0);
+  const handleSetValue = (value) => setCount(value);
+
+  return (
+    <div>
+      <Stats count={count} />
+      <Chart count={count} />
+      <Table count={count} />
+      <Summary count={count} />
+      <Actions
+        count={count}
+        onIncrement={handleIncrement}
+        onReset={handleReset}
+        onSetValue={handleSetValue}
+      />
+    </div>
+  );
+}
+
+// Now Actions has a clear contract
+function Actions({ count, onIncrement, onReset, onSetValue }) {
+  return (
+    <div>
+      <button onClick={onIncrement}>+1</button>
+      <button onClick={onReset}>Reset</button>
+      <button onClick={() => onSetValue(100)}>Set to 100</button>
+    </div>
+  );
+}
+```
+
+**Benefits:**
+- Clear component contract (props document capabilities)
+- Parent controls state logic (single source of truth)
+- Easy to debug (state updates in one place)
+- Reusable components (Actions works with any parent)
+
+**Key concept:** Data flows down (props). Events flow up (callbacks). Parent owns state.
+
+</details>
+
+### Question 6: Integrating Everything
+
+**Final Scenario:** You're building a real-time collaborative todo app. Consider all 5 concepts:
+
+- Users can add/edit/delete todos (needs controlled inputs)
+- Todos can be reordered by drag-drop (needs stable keys)
+- Multiple users collaborate (needs optimistic updates)
+- UI updates immediately, syncs to server in background (needs side effects in right phase)
+- Theme, user, and socket connection are used app-wide (needs props/context decision)
+
+**Your Task:** For each requirement, which concept from this chapter applies?
+
+<details>
+<summary>✅ Answer</summary>
+
+**1. Add/edit/delete todos → Controlled Inputs (1.3)**
+- Todo text inputs need validation
+- Need to show character count
+- Need immediate feedback
+- ✅ Use controlled inputs with `value` + `onChange`
+
+**2. Drag-drop reordering → Stable Keys (1.2)**
+- Array order changes constantly
+- DOM elements move positions
+- Must preserve component identity
+- ✅ Use `key={todo.id}` NOT `key={index}`
+
+**3. Optimistic updates → Render Phase Purity (1.1)**
+```javascript
+function TodoItem({ todo, onUpdate }) {
+  const [optimisticText, setOptimisticText] = useState(todo.text);
+
+  useEffect(() => {
+    // Sync when server confirms
+    setOptimisticText(todo.text);
+  }, [todo.text]);
+
+  const handleSave = async (newText) => {
+    setOptimisticText(newText); // Optimistic UI
+
+    try {
+      await updateTodoOnServer(todo.id, newText);
+      // Server confirms, no revert needed
+    } catch (error) {
+      setOptimisticText(todo.text); // Revert on error
+      showError('Failed to save');
+    }
+  };
+}
+```
+- Optimistic state update in render phase ✅
+- Server sync in commit phase (useEffect) ✅
+
+**4. Background sync → Side Effects in Commit (1.1)**
+```javascript
+useEffect(() => {
+  const syncToServer = async () => {
+    await fetch('/api/todos', {
+      method: 'POST',
+      body: JSON.stringify(todos)
+    });
+  };
+
+  // Debounce syncs
+  const timer = setTimeout(syncToServer, 1000);
+  return () => clearTimeout(timer);
+}, [todos]);
+```
+- Fetch in useEffect (commit phase) ✅
+- No side effects in render ✅
+
+**5. Theme/user/socket → Context vs Props (1.4)**
+
+**Use Context for:**
+- `UserContext` - used by 10+ components (Avatar, Profile, Permissions)
+- `ThemeContext` - used by all components for styling
+- `SocketContext` - used by real-time sync logic
+
+**Use Props for:**
+- `todos` array - passed to TodoList
+- `onAddTodo` callbacks - specific to features
+- Component-specific data
+
+**Data Flow (1.5):**
+```javascript
+function App() {
+  const [todos, setTodos] = useState([]);
+
+  const handleAddTodo = (text) => {
+    const newTodo = { id: uuid(), text, completed: false };
+    setTodos([...todos, newTodo]);
+    socketEmit('todo:add', newTodo); // Side effect
+  };
+
+  return (
+    <UserContext.Provider value={user}>
+      <ThemeContext.Provider value={theme}>
+        <SocketContext.Provider value={socket}>
+          <TodoApp
+            todos={todos}
+            onAddTodo={handleAddTodo}  // Event handler, not setState
+          />
+        </SocketContext.Provider>
+      </ThemeContext.Provider>
+    </UserContext.Provider>
+  );
+}
+```
+
+**Key Concept:** All 5 sections work together in real apps!
+
+</details>
 
 ---
 
