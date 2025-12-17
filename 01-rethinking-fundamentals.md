@@ -371,63 +371,114 @@ Good! This primes your brain to learn about reconciliation. Your brain is now in
 
 ### The Cost of Bad Keys
 
-**Visualizing React's Reconciliation:**
+**Let's see the bug happen step-by-step:**
 
-```
-BEFORE deletion (items = ["Apple", "Banana", "Cherry"]):
+Imagine you have a simple editable grocery list. You render it like this:
 
-React's View:
-┌─────────────────────────────────────────┐
-│ key=0 → <input defaultValue="Apple"  /> │ (User typed "XXX" here)
-│ key=1 → <input defaultValue="Banana" /> │
-│ key=2 → <input defaultValue="Cherry"/> │
-└─────────────────────────────────────────┘
-
-DOM State:
-  input[0]: value="XXX"    ← actual DOM value
-  input[1]: value="Banana"
-  input[2]: value="Cherry"
-
-
-AFTER deleting "Banana" (items = ["Apple", "Cherry"]):
-
-React's View:
-┌─────────────────────────────────────────┐
-│ key=0 → <input defaultValue="Apple"  /> │ ← SAME KEY: React reuses!
-│ key=1 → <input defaultValue="Cherry" /> │ ← SAME KEY: React reuses!
-│ key=2 → ??? REMOVED                     │
-└─────────────────────────────────────────┘
-
-React's Decision:
-  key=0: "Same key, update defaultValue to 'Apple'"
-         BUT: DOM input already has value="XXX"
-         defaultValue only works on initial mount!
-         Result: "XXX" stays! 🐛
-
-  key=1: "Same key, update defaultValue to 'Cherry'"
-         Moves from input[1] to... wait, it's already there!
-
-  key=2: "This key disappeared, remove input[2]"
-
-FINAL DOM:
-  input[0]: value="XXX"    ← WRONG! Should be "Apple"
-  input[1]: value="Cherry"  ← correct by accident
+```javascript
+{items.map((item, index) => (
+  <input key={index} defaultValue={item} />
+))}
 ```
 
-**With stable IDs:**
+**Step 1: Initial render**
 ```
-BEFORE:
-  key="apple-123"  → <input defaultValue="Apple"  /> (value="XXX")
-  key="banana-456" → <input defaultValue="Banana" />
-  key="cherry-789" → <input defaultValue="Cherry"/>
+Your array: ["Apple", "Banana", "Cherry"]
 
-AFTER deleting Banana:
-  key="apple-123"  → <input defaultValue="Apple"  /> ← SAME KEY: reuse ✓
-  key="banana-456" → REMOVED ← This key gone: destroy component ✓
-  key="cherry-789" → <input defaultValue="Cherry"/> ← SAME KEY: reuse ✓
-
-Result: "XXX" stays with Apple component (correct!)
+React creates:
+  <input key={0} defaultValue="Apple" />
+  <input key={1} defaultValue="Banana" />
+  <input key={2} defaultValue="Cherry" />
 ```
+
+Looks good so far!
+
+**Step 2: User edits the first input**
+
+User changes "Apple" to "Granny Smith Apples" by typing in the first box.
+
+```
+What you see on screen:
+  [Granny Smith Apples] [Banana] [Cherry]
+
+Your array is still: ["Apple", "Banana", "Cherry"]
+(Array doesn't change until user saves!)
+
+The ACTUAL browser DOM:
+  <input> has value="Granny Smith Apples" ← User typed this
+  <input> has value="Banana"
+  <input> has value="Cherry"
+```
+
+**Step 3: User deletes "Banana" from the array**
+
+Your array becomes: ["Apple", "Cherry"]
+
+Now React re-renders with the new array:
+
+```javascript
+// React creates this NEW structure:
+{["Apple", "Cherry"].map((item, index) => (
+  <input key={index} defaultValue={item} />
+))}
+
+// Which means:
+  <input key={0} defaultValue="Apple" />   ← index 0
+  <input key={1} defaultValue="Cherry" />  ← index 1
+```
+
+**Here's where the bug happens:**
+
+React looks at the keys and thinks:
+- "I already have a `key={0}` input, I'll reuse it!"
+- "I already have a `key={1}` input, I'll reuse it!"
+- "Where did `key={2}` go? I'll delete it!"
+
+**The problem:** React reuses the EXISTING DOM elements (with user's typed values inside!) instead of creating new ones.
+
+```
+What React does:
+  ✅ Keep <input key={0}> (it has "Granny Smith Apples" typed in it)
+  ✅ Keep <input key={1}> (it has "Banana" typed in it)
+  ❌ Delete <input key={2}>
+
+What you see on screen:
+  [Granny Smith Apples] [Banana]
+
+Expected: [Granny Smith Apples] [Cherry]
+Actual:   [Granny Smith Apples] [Banana] ← WRONG!
+```
+
+**Why this happens:**
+
+React uses keys to track "which component is which" across re-renders. When you use `key={index}`:
+- Before deletion: Apple is key=0, Banana is key=1, Cherry is key=2
+- After deletion: Apple is key=0, Cherry is key=1
+
+React thinks "key=1 is still here, so I'll reuse that same input element." But key=1 used to be Banana, and now it's supposed to be Cherry!
+
+**The fix: Use stable IDs**
+
+```javascript
+// Give each item a unique ID that doesn't change
+const items = [
+  { id: "apple-123", name: "Apple" },
+  { id: "banana-456", name: "Banana" },
+  { id: "cherry-789", name: "Cherry" }
+];
+
+// Use the ID as the key
+{items.map((item) => (
+  <input key={item.id} defaultValue={item.name} />
+))}
+```
+
+Now when you delete Banana:
+- React sees `key="banana-456"` is gone → Destroys that input ✓
+- React sees `key="apple-123"` is still here → Keeps it (with "Granny Smith Apples") ✓
+- React sees `key="cherry-789"` is still here → Keeps it ✓
+
+**The rule:** Keys should be **stable** (don't change), **unique** (no duplicates), and **tied to the data** (not the position).
 
 ---
 
@@ -2934,7 +2985,7 @@ function UserDashboard() {
 **Measure:** How many unnecessary re-renders happen with `key={index}` vs `key={item.id}` when reordering?
 
 ```javascript
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Copy-paste this entire component
 function KeysPerformanceLab() {
@@ -2997,7 +3048,7 @@ function KeysPerformanceLab() {
 
 function TaskItem({ item, renderCounts, setRenderCounts }) {
   // Track renders for this specific item
-  React.useEffect(() => {
+  useEffect(() => {
     setRenderCounts((prev) => ({
       ...prev,
       [item.id]: (prev[item.id] || 0) + 1,
@@ -3038,7 +3089,7 @@ export default KeysPerformanceLab;
 **Measure:** How does controlled input performance degrade with large forms?
 
 ```javascript
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Copy-paste this entire component
 function ControlledInputLab() {
@@ -3056,7 +3107,7 @@ function ControlledInputLab() {
   };
 
   // Track renders
-  React.useEffect(() => {
+  useEffect(() => {
     setRenderCount((c) => c + 1);
   });
 
