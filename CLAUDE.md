@@ -13,8 +13,8 @@ This is **"From Junior to Senior: A Hands-On React Developer Journey"** - an edu
 - Uses collapsible markdown sections (`<details>/<summary>`) for progressive disclosure
 - **Research-optimized format:** Implements 5 evidence-based learning techniques (see Educational Principles section)
 
-**Latest Enhancement (2024):**
-Chapter 1 now includes advanced learning optimizations based on 2023-2024 cognitive science research:
+**Latest Enhancement (December 2025):**
+Chapters 1-3 now include advanced learning optimizations based on 2023-2024 cognitive science research:
 - Forward testing prompts (improves encoding by 20-30%)
 - Interleaved practice (improves transfer by 43%)
 - Spaced retrieval (improves retention by 200-400%)
@@ -27,9 +27,43 @@ These techniques should be applied to all future chapter conversions.
 
 ### Chapter Structure (Standardized Format)
 
-**Current State:** Only Chapter 1 (`01-rethinking-fundamentals.md`) has been fully converted to the new 10/10 format. All other chapters use older formats and need conversion.
+**Current State:** Chapters 1-6 have been fully converted to the new 10/10 format. Chapters 7-28 use older formats and need conversion.
 
-**Chapter 1 Format (Template for all chapters):**
+**Conversion Status:**
+- ✅ Chapter 1: `01-rethinking-fundamentals.md` - 3,300+ lines (GOLD STANDARD)
+  - Converted: 2024
+  - Format: Full 10/10 with all learning optimizations
+- ✅ Chapter 2: `02-advanced-patterns.md` - 2,180+ lines (10/10 format)
+  - Converted: December 2025
+  - Growth: 535 → 2,180 lines (4.1× expansion)
+  - Added: 3 forward testing prompts, 2 knowledge checks, 4 progressive disclosure exercises, war story, 6-item mistakes gallery, cumulative review with 6 questions
+  - Topics: Compound components, render props, props getters, control props
+- ✅ Chapter 3: `03-mastering-hooks.md` - 1,811+ lines (10/10 format)
+  - Converted: December 2025
+  - Growth: 960 → 1,811 lines (1.9× expansion)
+  - Added: Forward testing prompts, 2 progressive disclosure exercises, war story ($180k useEffect bug), 6-item mistakes gallery, cumulative review with 6 questions, ASCII diagrams
+  - Topics: useState, useEffect, useCallback/useMemo, useReducer, useRef, custom hooks
+- ✅ Chapter 4: `04-performance-optimization.md` - 2,786+ lines (10/10 format)
+  - Converted: December 2025
+  - Growth: 836 → 2,786 lines (3.3× expansion)
+  - Added: Junior/Senior perspectives, 3 forward testing prompts, 1 knowledge check (3 questions), 1 progressive disclosure exercise, war story ($2.4M Black Friday disaster), 6-item mistakes gallery, 3-lab performance experiments, cumulative review with 6 questions, 2 ASCII diagrams (render pipeline, flame graph)
+  - Topics: React DevTools Profiler, React.memo, useMemo, useCallback, keys, virtualization, performance budget
+  - War story: Black Friday performance meltdown (12M users, $2.3M lost sales, 847K abandoned carts, 23% mobile crashes)
+- ✅ Chapter 5: `05-code-splitting.md` - 1,210+ lines (10/10 format)
+  - Converted: December 2025
+  - Growth: 692 → 1,210 lines (1.75× expansion)
+  - Added: Junior/Senior perspectives, 1 forward testing prompt, war story ($1.23M bundle disaster), 6-item compact mistakes gallery, cumulative review with 6 questions, 1 ASCII diagram (bundle visualization)
+  - Topics: Bundle analysis, React.lazy, Suspense, route-based splitting, component lazy loading, tree-shaking, prefetching
+  - War story: 18MB bundle killed mobile signups (250K users, 73% conversion drop, $890K lost MRR, $500K wasted marketing)
+- ✅ Chapter 6: `06-memory-debugging.md` - 1,247+ lines (10/10 format)
+  - Converted: December 2025
+  - Growth: 810 → 1,247 lines (1.54× expansion)
+  - Added: Junior/Senior perspectives, war story ($4.2M Black Friday memory leak disaster), 6-item compact mistakes gallery, cumulative review with 6 questions
+  - Topics: Memory leaks, useEffect cleanup, Chrome DevTools, heap snapshots, event listeners, debugging strategies
+  - War story: Missing event listener cleanup crashed Black Friday (5M users, $4.2M lost, 680K concurrent users, 238K crashes)
+- ⚠️ Chapters 7-28: OLD FORMAT - need conversion
+
+**10/10 Format Template (Based on Chapters 1-2):**
 1. **Introduction & Learning Objectives** - Sets context and goals
 2. **Main Sections (e.g., 1.1, 1.2, 1.3)** - Core content with Junior vs Senior perspectives
    - **Forward Testing Prompts** - Brief recall questions BEFORE each section (NEW)
@@ -52,15 +86,18 @@ These techniques should be applied to all future chapter conversions.
 
 ```
 junior-to-senior/
-├── README.md                      # Main entry point, book overview
-├── HOW-TO-USE-THIS-BOOK.md       # Learning paths, time commitments, strategies
-├── EXERCISE-FORMAT-GUIDE.md      # Template for creating/converting chapters
-├── 01-rethinking-fundamentals.md # ✅ GOLD STANDARD (10/10 format)
-├── 02-advanced-patterns.md       # ⚠️ OLD FORMAT - needs conversion
-├── 03-mastering-hooks.md         # ⚠️ OLD FORMAT - needs conversion
-├── [04-28...].md                 # ⚠️ OLD FORMAT - needs conversion
-├── BOOK-STATUS.md                # Completion tracking
-└── *.sh                          # Helper scripts (not used)
+├── README.md                         # Main entry point, book overview
+├── HOW-TO-USE-THIS-BOOK.md          # Learning paths, time commitments, strategies
+├── EXERCISE-FORMAT-GUIDE.md         # Template for creating/converting chapters
+├── 01-rethinking-fundamentals.md    # ✅ GOLD STANDARD (10/10 format, 3,300+ lines)
+├── 02-advanced-patterns.md          # ✅ CONVERTED (10/10 format, 2,180+ lines)
+├── 03-mastering-hooks.md            # ✅ CONVERTED (10/10 format, 1,811+ lines)
+├── 04-performance-optimization.md   # ✅ CONVERTED (10/10 format, 2,786+ lines)
+├── 05-code-splitting.md             # ✅ CONVERTED (10/10 format, 1,210+ lines)
+├── 06-memory-debugging.md           # ✅ CONVERTED (10/10 format, 1,247+ lines)
+├── [07-28...].md                    # ⚠️ OLD FORMAT - needs conversion
+├── BOOK-STATUS.md                   # Completion tracking
+└── *.sh                             # Helper scripts (not used)
 ```
 
 ### Chapter Naming Convention
